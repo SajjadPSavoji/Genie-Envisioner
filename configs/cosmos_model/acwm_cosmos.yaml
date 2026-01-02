@@ -5,8 +5,8 @@ tracker_name: cosmos2_trainer
 
 logging_dir: logs
 
-pretrained_model_name_or_path: PATH_TO_PRETRAINED_WEIGHTS_OF_VAE_AND_TOKENIZER
-tokenizer_pretrained_model_name_or_path: PATH_TO_PRETRAINED_WEIGHTS_OF_VAE_AND_TOKENIZER
+pretrained_model_name_or_path: /shared_work/physical_intelligence/Cosmos-Predict2-2B-Video2World
+tokenizer_pretrained_model_name_or_path: /shared_work/physical_intelligence/Cosmos-Predict2-2B-Video2World
 
 
 ### 
@@ -56,7 +56,7 @@ pixel_wise_timestep: False
 
 
 diffusion_model:
-  model_path: LOCAL_PATH/TO/ge_sim_cosmos_v0.1.safetensors
+  model_path: /shared_work/physical_intelligence/ge_weights/ge_sim_cosmos_v0.1.safetensors
 
   config:
     in_channels: 26  # 16 (vae) + 3 (traj) + 6 (raymap) + 1 (padding mask)
@@ -82,20 +82,20 @@ diffusion_model:
 
 data:
   train:
-    sample_size: [384, 512]
+    sample_size: [192, 256]  # reduced from [384, 512] for 16GB GPU
     sample_n_frames: 360
     preprocess :  'resize'
     valid_cam :  ['head', 'hand_left', 'hand_right']
-    chunk: 25 ### 4n+1 for cosmos without padding frames
-    action_chunk: 25
+    chunk: 13  # reduced from 25 (must be 4n+1)
+    action_chunk: 13
     n_previous: 4
   val:
-    sample_size: [384, 512]
+    sample_size: [192, 256]  # reduced from [384, 512] for 16GB GPU
     sample_n_frames: 360
     preprocess :  'resize'
     valid_cam :  ['head', 'hand_left', 'hand_right']
-    chunk: 25
-    action_chunk: 25
+    chunk: 13  # reduced from 25 (must be 4n+1)
+    action_chunk: 13
     n_previous: 4
 
 num_inference_step: 15
