@@ -237,7 +237,7 @@ if __name__ == "__main__":
         assert(args.prompt_txt_file is not None)
         with open(args.prompt_txt_file, "r") as f:
             args.prompt = f.readline().strip()
-    
+    print(args)
     infer(
         args.config_file, args.image_root, args.prompt, args.output_path,
         args.n_chunk, normed_state,
