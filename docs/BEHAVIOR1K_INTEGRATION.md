@@ -4,26 +4,48 @@
 
 The integration uses a **client-server architecture** where BEHAVIOR-1K (simulation) sends observations to a GE-ACT server and receives actions back.
 
-```mermaid
-sequenceDiagram
-    participant B1K as BEHAVIOR-1K<br/>(OmniGibson Simulator)
-    participant Client as WebsocketClientPolicy<br/>(in eval.py)
-    participant Server as WebsocketPolicyServer<br/>(serve_ge_act_b1k.py)
-    participant Wrapper as GEActB1KWrapper
-    participant GE as MVActor<br/>(GE-ACT Model)
-
-    B1K->>Client: obs dict (images + proprio)
-    Client->>Server: WebSocket message (msgpack)
-    Server->>Wrapper: obs dict
-    Wrapper->>Wrapper: Process obs → (3, H, W, 3) images
-    Wrapper->>GE: play(obs, prompt, state)
-    GE->>Wrapper: action (22 dims)
-    Wrapper->>Wrapper: Extract first 16 → pad to 23
-    Wrapper->>Server: action tensor (1, 23)
-    Server->>Client: WebSocket response
-    Client->>B1K: action tensor
-    B1K->>B1K: Execute action in simulator
 ```
+┌─────────────┐         ┌──────────────────┐         ┌──────────────────┐
+│ BEHAVIOR-1K │         │ WebSocket Client │         │ WebSocket Server │
+│ (Simulator) │         │   (eval.py)      │         │(serve_ge_act.py) │
+└──────┬──────┘         └────────┬─────────┘         └────────┬─────────┘
+       │                         │                            │
+       │ obs (images + proprio)  │                            │
+       ├────────────────────────>│                            │
+       │                         │                            │
+       │                         │ WebSocket msg (msgpack)    │
+       │                         ├───────────────────────────>│
+       │                         │                            │
+       │                         │                    ┌───────▼────────┐
+       │                         │                    │ GEActB1KWrapper│
+       │                         │                    └───────┬────────┘
+       │                         │                            │
+       │                         │                    Process obs →
+       │                         │                    (3, H, W, 3)
+       │                         │                            │
+       │                         │                    ┌───────▼────────┐
+       │                         │                    │    MVActor     │
+       │                         │                    │  (GE-ACT Model)│
+       │                         │                    └───────┬────────┘
+       │                         │                            │
+       │                         │                    action (22 dims)
+       │                         │                            │
+       │                         │                    ┌───────▼────────┐
+       │                         │                    │ Extract → Pad  │
+       │                         │                    │  16 → 23 dims  │
+       │                         │                    └───────┬────────┘
+       │                         │                            │
+       │                         │ action tensor (1, 23)      │
+       │                         │<───────────────────────────┤
+       │                         │                            │
+       │ action tensor (1, 23)   │                            │
+       │<────────────────────────┤                            │
+       │                         │                            │
+  Execute action                 │                            │
+  in simulator                   │                            │
+       │                         │                            │
+```
+
 
 ---
 
