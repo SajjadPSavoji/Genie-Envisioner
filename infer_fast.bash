@@ -1,19 +1,19 @@
 #!/bin/bash
 
 # Array of chunk values to test
-CHUNKS=(1 2 4 6 8 10)
+CHUNKS=(1) # 2) # 4 6 8 10)
 
 # Array of prompt types to test
 PROMPT_TYPES=(
-    "complete_prompt"
+    # "complete_prompt"
     # "first_prompt"
     # "second_prompt"
     # "no_prompt"
-    # "task_prompt"
+    "task_prompt"
 )
 
 # Base paths
-IMAGE_ROOT_BASE="video_gen_examples/sample_684445_frame500"
+IMAGE_ROOT_BASE="video_gen_examples/sample_b1k_task20_ep10_frame1575"
 CONFIG_FILE="configs/ltx_model/video_model_infer_fast.yaml"
 OUTPUT_BASE="evaluation_results/video_gen"
 

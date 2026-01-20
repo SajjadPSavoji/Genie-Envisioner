@@ -153,6 +153,7 @@ def infer(
     else:
         video_fps = default_fps
 
+    print("VIDEO FPS--------", video_fps)
     tokenizer, text_encoder, vae, diffusion_model, scheduler, pipe = prepare_model(args, device=device)
 
     valid_cams = [_+"_color" for _ in args.data["train"]["valid_cam"]]
