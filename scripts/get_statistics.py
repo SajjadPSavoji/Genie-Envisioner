@@ -30,6 +30,7 @@ def get_statistics(data_root, data_name, data_type, save_path, action_key="actio
     assert(data_type in ["joint", "eef"])
 
     data_path_list = os.listdir(data_root)
+    # breakpoint()
     data_path_list.sort()
     if nrnd <= len(data_path_list):
         data_path_list = np.random.choice(data_path_list, nrnd)
@@ -39,6 +40,7 @@ def get_statistics(data_root, data_name, data_type, save_path, action_key="actio
     delta_data_list = []
     for data_path in tqdm.tqdm(data_path_list):
         data = load_data(os.path.join(data_root, data_path), action_key)
+        breakpoint()
         data_list.append(data)
         delta_data = data[1:] - data[:-1]
         delta_data_list.append(delta_data)
