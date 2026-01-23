@@ -135,8 +135,8 @@ data:
     state_key: observation.state
     action_key: action
     # Debug settings - uncomment for faster testing
-    task_ids: [0]  # Only load 2 tasks
-    max_episodes_per_task: 5  # Only 5 episodes per task
+    # task_ids: [0]  # Only load 2 tasks
+    # max_episodes_per_task: 5  # Only 5 episodes per task
   val:
     data_roots: ["/shared_work/physical_intelligence/2025-challenge-demos"]
     domains: ["behavior1k"]
@@ -157,8 +157,8 @@ data:
     state_key: observation.state
     action_key: action
     # Debug settings - uncomment for faster testing
-    task_ids: [0]  # Different tasks for val
-    max_episodes_per_task: 2  # Only 2 episodes per task for val
+    # task_ids: [0]  # Different tasks for val
+    # max_episodes_per_task: 2  # Only 2 episodes per task for val
 
 use_color_jitter: true
 num_inference_step: 10
