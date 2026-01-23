@@ -89,6 +89,7 @@ class B1KDataset(Dataset):
         fix_mem_idx=None,
         stat_file=None,
         task_ids=None,
+        max_episodes_per_task=None,
     ):
         """
         Args:
@@ -102,8 +103,11 @@ class B1KDataset(Dataset):
             n_previous: Number of memory/context frames
             stat_file: Path to normalization statistics JSON file
             task_ids: Optional list of task IDs to load (e.g., [0, 1, 5]). If None, loads all tasks.
+            max_episodes_per_task: Optional limit on episodes per task (for debugging). If None, loads all episodes.
         """
         zero_rank_print(f"Loading BEHAVIOR-1K dataset...")
+        
+        self.max_episodes_per_task = max_episodes_per_task
         
         assert action_type in ["delta", "absolute", "relative"]
         self.action_type = action_type
@@ -230,7 +234,17 @@ class B1KDataset(Dataset):
 
                 task_name = task_dir.name  # e.g., "task-0000"
                 
-                for parquet_file in sorted(task_dir.glob("*.parquet")):
+                # Get all parquet files for this task
+                parquet_files = sorted(task_dir.glob("*.parquet"))
+                
+                # Limit episodes per task if specified (for debugging)
+                if self.max_episodes_per_task is not None:
+                    original_count = len(parquet_files)
+                    parquet_files = parquet_files[:self.max_episodes_per_task]
+                    if len(parquet_files) < original_count:
+                        zero_rank_print(f"  {task_name}: Limited to {len(parquet_files)}/{original_count} episodes")
+                
+                for parquet_file in parquet_files:
                     episode_name = parquet_file.stem  # e.g., "episode_00000010"
                     
                     # Count frames in episode

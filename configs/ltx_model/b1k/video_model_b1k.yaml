@@ -94,7 +94,7 @@ pixel_wise_timestep: True
 
 
 diffusion_model:
-  model_path: /shared_work/physical_intelligence/ge_weights/ge_base_fast.safetensors
+  model_path: /shared_work/physical_intelligence/ge_weights/GE_base_fast_v0.1.safetensors
   config:
     activation_fn: gelu-approximate
     attention_bias: true
@@ -134,9 +134,9 @@ data:
     stat_file: configs/ltx_model/b1k/behavior1k_stats.json
     state_key: observation.state
     action_key: action
-    extra_parquet_index: False
-    # Optional: filter to specific tasks (comment out to use all 50 tasks)
-    # task_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    # Debug settings - uncomment for faster testing
+    task_ids: [0]  # Only load 2 tasks
+    max_episodes_per_task: 5  # Only 5 episodes per task
   val:
     data_roots: ["/shared_work/physical_intelligence/2025-challenge-demos"]
     domains: ["behavior1k"]
@@ -156,8 +156,9 @@ data:
     stat_file: configs/ltx_model/b1k/behavior1k_stats.json
     state_key: observation.state
     action_key: action
-    extra_parquet_index: False
-    # task_ids: [40, 41, 42, 43, 44]
+    # Debug settings - uncomment for faster testing
+    task_ids: [0]  # Different tasks for val
+    max_episodes_per_task: 2  # Only 2 episodes per task for val
 
 use_color_jitter: true
 num_inference_step: 10
