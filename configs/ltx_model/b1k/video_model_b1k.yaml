@@ -4,7 +4,7 @@ report_to: None
 tracker_name: ltx_trainer
 
 logging_dir: logs
-output_dir: outputs/b1k_video_adaptation
+output_dir: output/b1k_video_adaptation
 pretrained_model_name_or_path: /pm/physical_intelligence/LTX-Video
 
 ###
