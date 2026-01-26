@@ -75,9 +75,9 @@ class MVActor:
         self.action_space = args.data["train"]["action_space"]
         self.add_state = getattr(args, "add_state", False)
 
-        print(self.action_type, self.action_space)
+        print(f"Action configuration: type={self.action_type}, space={self.action_space}")
         if self.add_state:
-            print("Add state")
+            print("State concatenation: ENABLED (proprioception will be added to action predictions)")
 
         if num_inference_steps is not None:
             args.num_inference_steps = num_inference_steps
@@ -152,7 +152,9 @@ class MVActor:
 
     def prepare_models(self,):
 
-        print("Initializing models")
+        print("=" * 60)
+        print("Loading GE-ACT model components...")
+        print("=" * 60)
         device = self.device
         dtype = self.dtype
 

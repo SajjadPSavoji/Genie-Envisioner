@@ -153,6 +153,7 @@ def infer(
     else:
         video_fps = default_fps
 
+    print("VIDEO FPS--------", video_fps)
     tokenizer, text_encoder, vae, diffusion_model, scheduler, pipe = prepare_model(args, device=device)
 
     valid_cams = [_+"_color" for _ in args.data["train"]["valid_cam"]]
@@ -237,7 +238,7 @@ if __name__ == "__main__":
         assert(args.prompt_txt_file is not None)
         with open(args.prompt_txt_file, "r") as f:
             args.prompt = f.readline().strip()
-    
+    print(args)
     infer(
         args.config_file, args.image_root, args.prompt, args.output_path,
         args.n_chunk, normed_state,

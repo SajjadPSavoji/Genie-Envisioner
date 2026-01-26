@@ -158,6 +158,9 @@ data:
     action_key: action
     # extra_parquet_index: False
     # task_ids: [40, 41, 42, 43, 44]
+    # Debug settings - uncomment for faster testing
+    # task_ids: [0]  # Different tasks for val
+    # max_episodes_per_task: 2  # Only 2 episodes per task for val
 
 use_color_jitter: true
 num_inference_step: 10
