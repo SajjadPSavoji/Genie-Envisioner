@@ -71,8 +71,8 @@ class B1KDataset(Dataset):
         'right_gripper_qpos': list(range(232, 234)),  # index 22 in filtered state (2 -> 1 summed)
     }
     
-    # Indices for delta action computation (17 dims): trunk position + both arm positions
-    # These dimensions compute differences from previous frame
+    # Selective delta indices (which dimensions compute delta vs absolute)
+    # Delta indices (17 dims): torso, left_arm, right_arm
     DELTA_ACTION_INDICES = list(range(3, 7)) + list(range(7, 14)) + list(range(15, 22))
     # Absolute indices (5 dims): base, left_gripper, right_gripper
     ABSOLUTE_ACTION_INDICES = [0, 1, 2, 14, 22]
@@ -109,7 +109,6 @@ class B1KDataset(Dataset):
         fix_mem_idx=None,
         stat_file=None,
         task_ids=None,
-        max_episodes_per_task=None,
     ):
         """
         Args:
@@ -123,11 +122,8 @@ class B1KDataset(Dataset):
             n_previous: Number of memory/context frames
             stat_file: Path to normalization statistics JSON file
             task_ids: Optional list of task IDs to load (e.g., [0, 1, 5]). If None, loads all tasks.
-            max_episodes_per_task: Optional limit on episodes per task (for debugging). If None, loads all episodes.
         """
         zero_rank_print(f"Loading BEHAVIOR-1K dataset...")
-        
-        self.max_episodes_per_task = max_episodes_per_task
         
         assert action_type in ["delta", "absolute", "relative"]
         self.action_type = action_type
@@ -254,17 +250,7 @@ class B1KDataset(Dataset):
 
                 task_name = task_dir.name  # e.g., "task-0000"
                 
-                # Get all parquet files for this task
-                parquet_files = sorted(task_dir.glob("*.parquet"))
-                
-                # Limit episodes per task if specified (for debugging)
-                if self.max_episodes_per_task is not None:
-                    original_count = len(parquet_files)
-                    parquet_files = parquet_files[:self.max_episodes_per_task]
-                    if len(parquet_files) < original_count:
-                        zero_rank_print(f"  {task_name}: Limited to {len(parquet_files)}/{original_count} episodes")
-                
-                for parquet_file in parquet_files:
+                for parquet_file in sorted(task_dir.glob("*.parquet")):
                     episode_name = parquet_file.stem  # e.g., "episode_00000010"
                     
                     # Count frames in episode
@@ -340,79 +326,36 @@ class B1KDataset(Dataset):
         
         return frame_indexes, action_indexes
     
-    def get_bias_std(self, domain_name):
+    def get_action_bias_std(self, domain_name, expected_dim=None):
         """Get normalization mean and std for actions or states.
 
         Args:
             domain_name: Name key for statistics (e.g., "behavior1k" or "behavior1k_state")
+            expected_dim: Expected dimension for fallback identity normalization
         """
         key = f"{domain_name}_{self.action_space}"
-        # TODO delte this later
-        zero_rank_print(f"Getting bias/std for key: {key}")
+        # if key not in self.StatisticInfo:
+        #     if expected_dim is None:
+        #         expected_dim = 23  # Default for action
+        #     zero_rank_print(f"Warning: Stats key '{key}' not found, using identity normalization with dim={expected_dim}")
+        #     return torch.zeros(1, expected_dim), torch.ones(1, expected_dim)
         return (
             torch.tensor(self.StatisticInfo[key]['mean']).unsqueeze(0),
             torch.tensor(self.StatisticInfo[key]['std']).unsqueeze(0) + 1e-6
         )
     
-    def extract_proprioceptive_stats(self, mean_full, std_full):
+    def extract_proprioceptive_stats(self, mean_full, std_full, indices):
         """Extract proprioceptive indices from full-dimensional statistics.
-        
-        Extracts statistics for 23-dim proprioceptive state following the same
-        logic as state extraction: arm/trunk/base positions directly, grippers summed.
         
         Args:
             mean_full: Full statistics mean tensor of shape (1, full_dim)
             std_full: Full statistics std tensor of shape (1, full_dim)
+            indices: List of indices to extract. If None, extracts first 23 dims.
         
         Returns:
-            Tuple of (mean_extracted, std_extracted) with shape (1, 23)
+            Tuple of (mean_extracted, std_extracted) with shape (1, len(indices))
         """
-        assert mean_full.dim() == 2 and std_full.dim() == 2
-        assert mean_full.size(0) == 1 and std_full.size(0) == 1
-        
-        extracted_means = []
-        extracted_stds = []
-        
-        # base_qvel (3 dims)
-        base_indices = list(range(253, 256))
-        extracted_means.append(mean_full[:, base_indices])
-        extracted_stds.append(std_full[:, base_indices])
-        
-        # trunk_qpos (4 dims)
-        trunk_indices = list(range(236, 240))
-        extracted_means.append(mean_full[:, trunk_indices])
-        extracted_stds.append(std_full[:, trunk_indices])
-        
-        # left_arm_qpos (7 dims)
-        left_arm_indices = list(range(158, 165))
-        extracted_means.append(mean_full[:, left_arm_indices])
-        extracted_stds.append(std_full[:, left_arm_indices])
-        
-        # left_gripper_qpos (2 -> 1 dim, summed)
-        left_gripper_indices = list(range(193, 195))
-        left_gripper_mean = mean_full[:, left_gripper_indices].sum(dim=1, keepdim=True)
-        left_gripper_std = torch.sqrt((std_full[:, left_gripper_indices] ** 2).sum(dim=1, keepdim=True))
-        extracted_means.append(left_gripper_mean)
-        extracted_stds.append(left_gripper_std)
-        
-        # right_arm_qpos (7 dims)
-        right_arm_indices = list(range(197, 204))
-        extracted_means.append(mean_full[:, right_arm_indices])
-        extracted_stds.append(std_full[:, right_arm_indices])
-        
-        # right_gripper_qpos (2 -> 1 dim, summed)
-        right_gripper_indices = list(range(232, 234))
-        right_gripper_mean = mean_full[:, right_gripper_indices].sum(dim=1, keepdim=True)
-        right_gripper_std = torch.sqrt((std_full[:, right_gripper_indices] ** 2).sum(dim=1, keepdim=True))
-        extracted_means.append(right_gripper_mean)
-        extracted_stds.append(right_gripper_std)
-        
-        # Concatenate: 3 + 4 + 7 + 1 + 7 + 1 = 23 dims
-        mean_extracted = torch.cat(extracted_means, dim=1)
-        std_extracted = torch.cat(extracted_stds, dim=1)
-        
-        assert mean_extracted.shape == (1, 23) and std_extracted.shape == (1, 23)
-        return mean_extracted, std_extracted
+        return mean_full[:, indices], std_full[:, indices]
 
     def seek_mp4(self, video_path_template, cam_name_list, slices):
         """Load video frames from mp4 files."""
@@ -502,11 +445,6 @@ class B1KDataset(Dataset):
         action = np.stack(data[self.action_key].values).astype(np.float32)
         state = np.stack(data[self.state_key].values).astype(np.float32)
 
-        # Debugging assertions and prints
-        assert action.ndim == 2, f"Expected action to be 2D, got {action.ndim}D"
-        assert state.ndim == 2, f"Expected state to be 2D, got {state.ndim}D"
-        zero_rank_print(f"Action shape: {action.shape}, State shape: {state.shape}")
-
         # Extract and process proprioceptive features with EEF (end-effector) gripper logic
         # EEF grippers: sum finger positions to get single width value
         proprio_features = []
@@ -533,27 +471,21 @@ class B1KDataset(Dataset):
         
         # Concatenate all features: 3 + 4 + 7 + 1 + 7 + 1 = 23 dims
         state = np.concatenate(proprio_features, axis=-1)
-        assert state.shape[1] == 23, f"Expected proprioceptive state to have 23 dims, got {state.shape[1]}"
-        zero_rank_print(f"Processed state shape: {state.shape}")
 
-        # Get normalization statistics - it will be 256 for state, but is 23 for actions
-        action_mean, action_std = self.get_bias_std(domain_name)
+        # Get normalization statistics - may be full 256-dim or already 23-dim from JSON
+        action_mean_full, action_std_full = self.get_action_bias_std(domain_name, expected_dim=23)
+        state_mean_full, state_std_full = self.get_action_bias_std(domain_name + "_state", expected_dim=23)
         
         # Extract proprioceptive indices consistently
-        state_mean_full, state_std_full = self.get_bias_std(domain_name + "_state")
-        state_mean, state_std = self.extract_proprioceptive_stats(state_mean_full, state_std_full)
-        
-        # Extract ALL state frames (not just the last one) for concatenation alignment
-        # This ensures state and action have matching batch dimensions
-        state = torch.FloatTensor(state)[indexes]  # Shape: (action_chunk, 23)
-        assert state.shape[1] == 23, f"Expected state to have 23 dims, got {state.shape[1]}"
-        state = (state - state_mean) / state_std
+        action_mean, action_std = self.extract_proprioceptive_stats(action_mean_full, action_std_full, indices=list(range(23)))
+        state_mean, state_std = self.extract_proprioceptive_stats(state_mean_full, state_std_full, indices=PROPRIO_INDICES_256)
         
         if self.action_type == "absolute":
             # All 23 dimensions use standard stats with consistent index extraction
             action = torch.FloatTensor(action[indexes])
-            assert action.shape[1] == 23, f"Expected action to have 23 dims, got {action.shape[1]}"
             action = (action - action_mean) / action_std
+            state = torch.FloatTensor(state)[indexes][self.n_previous - 1:self.n_previous]
+            state = (state - state_mean) / state_std
             
         elif self.action_type == "delta":
             # Use class constants for consistent index mapping
@@ -565,9 +497,12 @@ class B1KDataset(Dataset):
             # Get full delta stats (may be full 256-dim or already 23-dim from JSON)
             delta_mean_full, delta_std_full = self.get_action_bias_std(domain_name + "_delta", expected_dim=23)
             
+            # Extract proprioceptive indices consistently for delta stats
+            delta_mean_full_23, delta_std_full_23 = self.extract_proprioceptive_stats(delta_mean_full, delta_std_full, indices=list(range(23)))
+            
             # Extract only delta indices from extracted stats for proper dimensionality
-            delta_mean_subset = delta_mean_full[:, delta_action_indices]  # (1, 17)
-            delta_std_subset = delta_std_full[:, delta_action_indices]    # (1, 17)
+            delta_mean_subset = delta_mean_full_23[:, delta_action_indices]  # (1, 17)
+            delta_std_subset = delta_std_full_23[:, delta_action_indices]    # (1, 17)
             action_mean_absolute = action_mean[:, absolute_action_indices]  # (1, 5)
             action_std_absolute = action_std[:, absolute_action_indices]    # (1, 5)
             
@@ -609,12 +544,6 @@ class B1KDataset(Dataset):
                 f"Please use 'absolute' or 'delta' action types instead."
             )
         
-        # Concatenate state to action as input (aligned with libero implementation)
-        # action shape: (action_chunk, 23), state shape: (action_chunk, 23)
-        ori_act_dim = action.shape[1]
-        action = torch.cat((action, state), dim=1)  # Shape: (action_chunk, 46)
-        state = torch.cat((torch.zeros([1, ori_act_dim]), state[self.n_previous-1:self.n_previous]), dim=1)  # Shape: (1, 46)
-
         # Load videos
         videos = self.seek_mp4(video_path_template, self.valid_cam, vid_indexes)
         videos, _ = self.transform_video(videos, specific_transforms_resize, sample_size)

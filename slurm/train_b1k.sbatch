@@ -3,7 +3,7 @@
 #SBATCH --partition=compute                
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:8
 #SBATCH --time=07-00:00:00
 #SBATCH --output=/pm/physical_intelligence/sajjad/slurm-logs/%x-%j.out
 #SBATCH --error=/pm/physical_intelligence/sajjad/slurm-logs/%x-%j.err
@@ -75,12 +75,12 @@ print(f'SUCCESS: Libero loaded from {libero.__file__}')
     python -m pip install --no-cache-dir libero
 }
 
-# --- 5. Sanity Check: GPU Visibility ---
-echo "Checking GPU availability..."
-python -c "import torch; dev_count = torch.cuda.device_count(); print(f'Torch sees {dev_count} GPUs'); exit(0 if dev_count == 1 else 1)" || { 
-    echo "ERROR: GPU mismatch. Expected 1, saw $(python -c 'import torch; print(torch.cuda.device_count())')" >&2
-    exit 1 
-}
+# # --- 5. Sanity Check: GPU Visibility ---
+# echo "Checking GPU availability..."
+# python -c "import torch; dev_count = torch.cuda.device_count(); print(f'Torch sees {dev_count} GPUs'); exit(0 if dev_count == 1 else 1)" || { 
+#     echo "ERROR: GPU mismatch. Expected 1, saw $(python -c 'import torch; print(torch.cuda.device_count())')" >&2
+#     exit 1 
+# }
 
 # --- 6. Execution ---
 echo "================================================================"

@@ -6,12 +6,13 @@ config_path=${2}
 # If WORLD_SIZE is not set, we are likely on a single node
 if [ -z $WORLD_SIZE ]; then
     NGPU=`nvidia-smi --list-gpus | wc -l`
+    NGPU=1
     echo "Training on 1 Node, $NGPU GPUs"
     
     # Check if MASTER_PORT is set in sbatch, otherwise default to 29505
     P_PORT=${MASTER_PORT:-29505}
     
-    torchrun --nnodes=1 \
+    CUDA_VISIBLE_DEVICES=3 torchrun --nnodes=1 \
         --nproc_per_node=$NGPU \
         --node_rank=0 \
         --master_port=$P_PORT \
