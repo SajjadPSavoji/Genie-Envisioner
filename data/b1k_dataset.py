@@ -347,8 +347,6 @@ class B1KDataset(Dataset):
             domain_name: Name key for statistics (e.g., "behavior1k" or "behavior1k_state")
         """
         key = f"{domain_name}_{self.action_space}"
-        # TODO delte this later
-        zero_rank_print(f"Getting bias/std for key: {key}")
         return (
             torch.tensor(self.StatisticInfo[key]['mean']).unsqueeze(0),
             torch.tensor(self.StatisticInfo[key]['std']).unsqueeze(0) + 1e-6
@@ -505,7 +503,6 @@ class B1KDataset(Dataset):
         # Debugging assertions and prints
         assert action.ndim == 2, f"Expected action to be 2D, got {action.ndim}D"
         assert state.ndim == 2, f"Expected state to be 2D, got {state.ndim}D"
-        zero_rank_print(f"Action shape: {action.shape}, State shape: {state.shape}")
 
         # Extract and process proprioceptive features with EEF (end-effector) gripper logic
         # EEF grippers: sum finger positions to get single width value
@@ -534,7 +531,6 @@ class B1KDataset(Dataset):
         # Concatenate all features: 3 + 4 + 7 + 1 + 7 + 1 = 23 dims
         state = np.concatenate(proprio_features, axis=-1)
         assert state.shape[1] == 23, f"Expected proprioceptive state to have 23 dims, got {state.shape[1]}"
-        zero_rank_print(f"Processed state shape: {state.shape}")
 
         # Get normalization statistics - it will be 256 for state, but is 23 for actions
         action_mean, action_std = self.get_bias_std(domain_name)

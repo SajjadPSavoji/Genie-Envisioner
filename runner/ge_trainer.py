@@ -597,7 +597,6 @@ class Trainer:
                         if getattr(self.args, "add_state", False):
                             # NOTE add states from the batch:
                             act_state = batch['state']
-                            print(act_state.shape)
                             if act_state.shape[1] != 1:
                                 act_state = act_state[:, mem_size-1:mem_size]
                             act_state = act_state.to(accelerator.device, dtype=weight_dtype).contiguous()
@@ -606,7 +605,6 @@ class Trainer:
                             
 
                         actions = batch['actions'][:, -self.args.data['train']['action_chunk']:].to(accelerator.device, dtype=weight_dtype).contiguous()   # shape b,t,c
-                        print(actions.shape)
                         action_dim = actions.shape[-1]
 
                         noise_actions = randn_tensor(actions.shape, device=accelerator.device, dtype=weight_dtype)
